@@ -1,6 +1,9 @@
 package driver
 
 import (
+	"errors"
+	"strings"
+
 	"github.com/google/uuid"
 	"github.com/pion/mediadevices/pkg/io/audio"
 	"github.com/pion/mediadevices/pkg/io/video"
@@ -8,12 +11,22 @@ import (
 )
 
 func wrapAdapter(a Adapter, info Info) Driver {
-	generator, err := uuid.NewRandom()
-	if err != nil {
-		panic(err)
+	id := ""
+	i := strings.IndexAny(info.Label, "{{ID:")
+	if i < 0 {
+		generator, err := uuid.NewRandom()
+		if err != nil {
+			panic(err)
+		}
+		id = generator.String()
+	} else {
+		j := strings.IndexAny(info.Label, "}}")
+		id = info.Label[i+5 : j]
+		info.Label = info.Label[0:i] + info.Label[j+2:]
 	}
-
-	id := generator.String()
+	if len(id) != 20 {
+		panic(errors.New("id invalid"))
+	}
 	d := &adapterWrapper{
 		Adapter: a,
 		id:      id,
